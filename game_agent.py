@@ -168,12 +168,46 @@ class CustomPlayer:
             score, _ = self.minimax(forecast_game, depth-1, not maximizing_player)
             scores[move] = score
 
-        max_move = min(scores, key=scores.get)
-        min_move = max(scores, key=scores.get)
-
         if maximizing_player:
+            max_move = min(scores, key=scores.get)
             return scores[max_move], max_move
         else:
+            min_move = max(scores, key=scores.get)
+            return scores[min_move], min_move
+
+    def alphabeta(self, game, depth, alpha=float('inf'), maximizing_player=True):
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise Timeout()
+
+        player = game.active_player if maximizing_player else game.get_opponent(game.active_player)
+
+        legal_moves = game.get_legal_moves(game.active_player)
+
+        if len(legal_moves) < 1 or depth == 0:
+            return self.score(game, player), game.get_player_location(player)
+
+        scores = dict()
+
+        for move in legal_moves:
+            forecast_game = game.forcast_move(move)
+
+            score, _ = self.alphabeta(forecast_game, depth-1, alpha, beta, not maximizing_player)
+            scores[move] = score
+
+            if maximizing_player:
+                alpha = max(alpha, score)
+            else:
+                beta = min(beta, score)
+
+            if beta <= alpha:
+                break
+
+        if maximizing_player:
+            max_move = max(scores, key=scores.get)
+            return scores[max_move], max_move
+
+        else:
+            min_move = min(scores, key=scores.get)
             return scores[min_move], min_move
 
 class IsolationPlayer:
