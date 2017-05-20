@@ -35,7 +35,18 @@ def custom_score(game, player):
         The heuristic value of the current game state to the specified player.
     """
     # TODO: finish this function!
-    raise NotImplementedError
+
+    if game.is_loser(player):
+        return float('-inf')
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves)
+    #return float(own_moves - opp_moves)
+    #return float((own_moves - opp_moves*2))
+    # raise NotImplementedError
 
 
 def custom_score_2(game, player):
@@ -89,6 +100,81 @@ def custom_score_3(game, player):
     # TODO: finish this function!
     raise NotImplementedError
 
+
+class CustomPlayer:
+    """docstring for CustomPlayer"""
+
+    def __init__(self, search_depth=3, score_fn=custom_score, iterative=True, method='minimax', timeout=10.):
+
+        self.search_depth = search_depth
+        self.iterative = iterative
+        self.score = score_fn
+        self.method = method
+        self.time_left = None
+        self.TIMER_THRESHOLD = timeout
+
+    def get_move(self, game, legal_moves, time_left):
+        self.time_left = time_left
+        if len(legal_moves) == 0:
+            return (-1, -1)
+
+        score, best_move = max((self.score(game, self), m) for m in legal_moves)
+
+        if game.move_count <= 1:
+            return best_move
+
+        else:
+            maximizing = game.active_player == game.__player_1__
+            try:
+                if self.iterative:
+                    depth = 1
+                    if self.method == 'minimax':
+                        while True:
+                            if self.time_left() < self.TIMER_THRESHOLD:
+                                raise Timeout()
+                            best_score, best_move = self.minimax(game, depth, maximizing)
+                            depth += 1
+                    if self.method == 'alphabeta':
+                        while True:
+                            if self.time_left < self.TIMER_THRESHOLD:
+                                raise Timeout()
+                            best_score, best_move = self.alphabeta(game, depth, maximizing)
+                            depth += 1
+                else:
+                    if self.method == 'minimax':
+                        best_score, best_move = self.minimax(game, self.search_depth, maximizing)
+                        return best_move
+
+                    if self.method == 'alphabeta':
+                        best_score, best_move = self.alphabeta(game, self.search_depth, maximizing)
+                        return best_move
+            except Timeout:
+                return best_move
+
+    def minimax(self, game, depth, maximizing_player=True):
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise Timeout()
+
+        player = game.active_player if maximizing_player else game.get_opponent(game.active_player)
+        legal_moves = game.get_legal_moves(game.active_player)
+
+        if (len(legal_moves) <= 1) or depth == 0:
+            return self.score(game, player), game.get_player_location(player)
+
+        scores = dict()
+
+        for move in legal_moves:
+            forecast_game = game.forcast_move(move)
+            score, _ = self.minimax(forecast_game, depth-1, not maximizing_player)
+            scores[move] = score
+
+        max_move = min(scores, key=scores.get)
+        min_move = max(scores, key=scores.get)
+
+        if maximizing_player:
+            return scores[max_move], max_move
+        else:
+            return scores[min_move], min_move
 
 class IsolationPlayer:
     """Base class for minimax and alphabeta agents -- this class is never
